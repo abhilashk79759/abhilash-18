@@ -1,0 +1,88 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <PulseSensorPlayground.h>
+#include <LiquidCrystal.h>
+
+// PulseSensor connection
+const int PulseWire = 0; // PulseSensor analog input
+PulseSensorPlayground pulseSensor;
+
+// Temperature sensor connection
+const int OneWireBus = 1; // DS18B20 data pin
+OneWire oneWire(OneWireBus);
+DallasTemperature sensors(&oneWire);
+DeviceAddress tempDeviceAddress;
+
+// LCD connection (adjust pins as needed)
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+// Other variables
+int myBPM;
+float temp;
+const int buzzer = 8; // Buzzer pin
+const int Threshold = 500; // Adjust this value to calibrate the PulseSensor
+
+void setup() {
+  Serial.begin(9600); // For debugging
+
+  // Initialize PulseSensor
+  pulseSensor.setAnodeAnalogPin(PulseWire);
+  pulseSensor.setThreshold(Threshold);
+  pulseSensor.begin();
+
+  // Initialize Temperature sensor
+  sensors.begin();
+  sensors.getAddress(tempDeviceAddress, 0); // Get the address of the first sensor
+
+  // Initialize Buzzer
+  pinMode(buzzer, OUTPUT);
+  digitalWrite(buzzer, LOW);
+
+  // Initialize LCD
+  lcd.begin(16, 2); // 16 characters, 2 lines
+  lcd.print("IoT Patient");
+  lcd.setCursor(0, 1);
+  lcd.print("Monitor System");
+  delay(1500);
+  digitalWrite(buzzer, LOW); // Turn off buzzer after initial message
+  lcd.clear();
+}
+
+void loop() {
+  // Read Heart Rate
+  myBPM = pulseSensor.getBeatsPerMinute();
+  if (pulseSensor.sawStartOfBeat()) {
+    beep();
+    lcd.setCursor(0, 1);
+    lcd.print("HEART:");
+    lcd.print(myBPM);
+    lcd.print(" BPM");
+    delay(20);
+  }
+
+  // Read Temperature
+  sensors.requestTemperatures();
+  temp = sensors.getTempC(tempDeviceAddress);
+
+  // Display Temperature
+  lcd.setCursor(0, 0);
+  lcd.print("BODY:");
+  lcd.print(temp);
+  lcd.print(" *C ");
+  delay(20); // Short delay to prevent flickering
+
+  // Call a function to upload data (implement this based on your needs)
+  // upload();
+}
+
+// Function to beep for a detected heart beat
+void beep() {
+  digitalWrite(buzzer, HIGH);
+  delay(50);
+  digitalWrite(buzzer, LOW);
+}
+
+// Function to print temperature
+float printTemperature(DeviceAddress deviceAddress) {
+  return sensors.getTempC(deviceAddress);
+}
